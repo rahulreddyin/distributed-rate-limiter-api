@@ -1,53 +1,124 @@
-# Distributed Rate Limiter & API Gateway
+# Distributed Rate Limiter API
 
-A backend systems project built with **Java, Spring Boot, Redis, Docker, and Docker Compose** that simulates API Gateway-style request throttling for high-traffic applications.
+A scalable **distributed rate limiting service** built using **Spring Boot, Redis, and Docker**.
+This system prevents API abuse by controlling how many requests a user or client can make within a defined time window.
 
-## Overview
+Designed for **microservices architectures and high-traffic APIs**.
 
-This project implements a **Redis-backed rate limiter** that enforces per-user and per-endpoint request quotas. It uses Spring Boot interceptors to inspect incoming requests and block traffic when configured limits are exceeded.
+---
 
-The system supports:
-- configurable request limits
-- endpoint-specific throttling policies
-- structured JSON error responses
-- rate-limit status inspection
-- Dockerized local deployment
-- integration testing
+## System Architecture
+
+Client → API Gateway → Rate Limiter Service → Redis
+
+Redis acts as the **central distributed store** to track request counts across multiple application instances.
+
+---
 
 ## Features
 
-- **Per-user rate limiting**
-- **Per-endpoint throttling policies**
-- **Redis-backed request counters**
-- **Fixed-window rate limiting**
-- **Structured JSON errors for HTTP 400 and 429**
-- **Admin status endpoint for request monitoring**
-- **Docker Compose setup for app + Redis**
-- **Integration tests for throttling behavior**
+• Distributed rate limiting using Redis
+• Token bucket / fixed window rate limiting strategy
+• REST API for request validation
+• Dockerized deployment
+• Configurable request limits
+• Scalable across multiple service instances
+
+---
 
 ## Tech Stack
 
-- **Backend:** Java 17, Spring Boot
-- **Cache / Rate Limit Store:** Redis
-- **Build Tool:** Maven
-- **Containerization:** Docker, Docker Compose
-- **Testing:** JUnit, Spring Boot Test
+Backend
+• Java
+• Spring Boot
+
+Infrastructure
+• Redis
+• Docker
+• Docker Compose
+
+Tools
+• Maven
+• Git
+
+---
+
+## How Rate Limiting Works
+
+1. Client sends request to API
+2. Service checks Redis for request count
+3. If request limit exceeded → return HTTP 429
+4. If within limit → allow request
+
+This ensures fair usage and protects backend services from overload.
+
+---
 
 ## API Endpoints
 
-### Protected endpoints
+### Check Rate Limit
 
-- `GET /api/data`
-- `GET /api/login`
-- `GET /api/admin`
+POST /api/rate-limit/check
 
-Each endpoint has its own configurable request limit.
+Request Example
 
-### Admin endpoint
+{
+"clientId": "user123"
+}
 
-- `GET /admin/ratelimit/status?userId=<userId>&endpoint=<endpoint>`
+Response
 
-Example:
+{
+"allowed": true,
+"remainingRequests": 4
+}
 
-```http
-GET /admin/ratelimit/status?userId=rahul123&endpoint=/api/data
+---
+
+## Running Locally
+
+### Start Redis
+
+docker-compose up -d
+
+### Build application
+
+./mvnw clean package
+
+### Run application
+
+java -jar target/ratelimiter-0.0.1-SNAPSHOT.jar
+
+Server runs on
+
+http://localhost:8080
+
+---
+
+## Docker Deployment
+
+Build image
+
+docker build -t rate-limiter .
+
+Run container
+
+docker run -p 8080:8080 rate-limiter
+
+---
+
+## Future Improvements
+
+• Sliding window rate limiting
+• Prometheus metrics integration
+• Grafana monitoring dashboards
+• Kubernetes deployment
+• API Gateway integration
+
+---
+
+## Author
+
+Rahul Reddy Puli
+
+Full Stack Software Engineer focused on scalable backend systems, distributed architectures, and cloud applications.

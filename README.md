@@ -1,6 +1,6 @@
 # Distributed Rate Limiter API
 
-A production-style **distributed rate limiting service** built using **Spring Boot, Redis, Docker, and Prometheus**.
+A production-style **distributed rate limiting service** built using **Spring Boot, Redis, Docker, Prometheus, and Grafana**.
 
 The service protects APIs from abuse by limiting the number of requests a user can make within a configured time window.
 
@@ -16,20 +16,22 @@ This project demonstrates **backend system design, distributed caching, observab
 
 1. Client sends a request to the API
 2. API extracts the `X-User-Id` header
-3. RateLimiterService checks Redis for the request counter
-4. Redis stores counters with TTL expiration
-5. If request exceeds limit → request blocked
+3. `RateLimiterService` checks Redis for the request counter
+4. Redis stores request counters with TTL expiration
+5. If the request exceeds the limit → request blocked
 6. Prometheus collects metrics for monitoring
+7. Grafana visualizes metrics using dashboards
 
 ---
 
 # Features
 
 - Distributed rate limiting using Redis
-- Per-user and per-endpoint request limits
-- Time-window throttling
-- Dockerized environment
-- Prometheus metrics
+- Per-user and per-endpoint request throttling
+- Configurable rate limit windows
+- Docker-based local deployment
+- Prometheus metrics and observability
+- Grafana monitoring dashboards
 - Production-style backend architecture
 
 ---
@@ -43,6 +45,7 @@ This project demonstrates **backend system design, distributed caching, observab
 | Build Tool | Maven |
 | Containerization | Docker |
 | Monitoring | Prometheus |
+| Visualization | Grafana |
 | Metrics | Micrometer |
 
 ---
@@ -68,7 +71,8 @@ ratelimiter
 │   └── application.properties
 │
 ├── docs
-│   └── architecture.png
+│   ├── architecture.png
+│   └── grafana-dashboard.png
 │
 ├── docker-compose.yml
 ├── Dockerfile
@@ -136,7 +140,7 @@ redis          redis   6379->6379
 ./mvnw spring-boot:run
 ```
 
-Application runs on
+Application runs on:
 
 ```
 http://localhost:8080
@@ -146,10 +150,10 @@ http://localhost:8080
 
 # API Usage
 
-All requests must include header
+All requests must include the header:
 
 ```
-X-User-Id
+Header: X-User-Id
 ```
 
 ---
@@ -166,7 +170,7 @@ GET /api/data
 
 ```
 GET http://localhost:8080/api/data
-X-User-Id: user123
+Header: X-User-Id: user123
 ```
 
 ### Response
@@ -184,7 +188,7 @@ X-User-Id: user123
 
 ```
 GET http://localhost:8080/api/admin
-X-User-Id: admin123
+Header: X-User-Id: admin123
 ```
 
 ### Request 1
@@ -209,7 +213,7 @@ X-User-Id: admin123
 
 # Rate Limit Exceeded Example
 
-Third request within window:
+Third request within the configured window:
 
 ```json
 {
@@ -232,10 +236,10 @@ Send multiple requests quickly:
 
 ```
 GET /api/admin
-X-User-Id: admin123
+Header: X-User-Id: admin123
 ```
 
-Expected results
+Expected results:
 
 | Request | Result |
 |-------|-------|
@@ -249,7 +253,107 @@ Expected results
 
 The service exposes **Prometheus-compatible metrics**.
 
-Metrics endpoint
+Metrics endpoint:
+
+```
+http://localhost:8080/actuator/prometheus
+```
+
+Prometheus collects metrics including:
+
+- application performance
+- API request statistics
+- JVM metrics
+- system resource usage
+- Redis command latency
+
+---
+
+# Monitoring Dashboard (Grafana)
+
+The system includes a complete **observability stack using Prometheus and Grafana** to monitor application performance and rate limiting behavior.
+
+### Example Grafana Dashboard
+
+![Grafana Dashboard](docs/grafana-dashboard.png)
+
+The dashboard provides real-time insight into:
+
+- allowed requests
+- blocked requests
+- API request throughput
+- application performance metrics
+
+---
+
+### Metrics Visualized
+
+**Allowed Requests**
+
+```
+ratelimiter_requests_allowed_total
+```
+
+Counts the number of requests that successfully passed the rate limiter.
+
+---
+
+**Blocked Requests**
+
+```
+ratelimiter_requests_blocked_total
+```
+
+Counts requests rejected with **HTTP 429 (Too Many Requests)**.
+
+---
+
+**API Requests Per Second**
+
+```
+sum(rate(http_server_requests_seconds_count{uri="/api/data"}[5m]))
+```
+
+Displays API request throughput for the `/api/data` endpoint.
+
+---
+
+### Monitoring Architecture
+
+```
+Client
+   │
+   ▼
+Spring Boot API
+   │
+   ▼
+Redis (Rate Limiting State)
+   │
+   ▼
+Prometheus (Metrics Collection)
+   │
+   ▼
+Grafana (Monitoring Dashboard)
+```
+
+---
+
+### Accessing the Monitoring Stack
+
+Grafana dashboard:
+
+```
+http://localhost:3000
+```
+
+Default credentials:
+
+```
+Username: admin
+Password: admin
+```
+
+Prometheus metrics endpoint:
 
 ```
 http://localhost:8080/actuator/prometheus
@@ -264,18 +368,18 @@ http://localhost:8080/actuator/prometheus
 | ratelimiter_requests_allowed_total | Total allowed requests |
 | ratelimiter_requests_blocked_total | Total blocked requests |
 
-Example output
+Example output:
 
 ```
-ratelimiter_requests_allowed_total 4
-ratelimiter_requests_blocked_total 1
+ratelimiter_requests_allowed_total 5
+ratelimiter_requests_blocked_total 2
 ```
 
 ---
 
 # Additional Metrics
 
-Prometheus automatically exposes system metrics
+Prometheus automatically exposes system metrics including:
 
 ```
 jvm_memory_used_bytes
@@ -284,7 +388,7 @@ http_server_requests_seconds
 process_cpu_usage
 ```
 
-These metrics help monitor
+These metrics help monitor:
 
 - JVM memory usage
 - CPU utilization
@@ -295,64 +399,67 @@ These metrics help monitor
 
 # Docker Deployment
 
-Start full stack
+Start the full stack:
 
 ```
 docker compose up --build
 ```
 
-Services started
+Services started:
 
 | Service | Port |
 |-------|------|
 | Spring Boot API | 8080 |
 | Redis | 6379 |
+| Prometheus | 9090 |
+| Grafana | 3000 |
 
 ---
 
 # Example Rate Limiter Workflow
 
-Client request
+Client request:
 
 ```
 GET /api/admin
-X-User-Id: admin123
+Header: X-User-Id: admin123
 ```
 
-Redis key generated
+Redis key generated:
 
 ```
 rate_limit:admin123:/api/admin
 ```
 
-Redis increments counter
+Redis increments request counter.
 
-If limit exceeded → request blocked.
+If the configured limit is exceeded → request blocked.
 
 ---
 
 # System Design Concepts Demonstrated
 
-This project demonstrates
+This project demonstrates:
 
-- Distributed rate limiting
+- distributed rate limiting
 - Redis-based caching
-- Time window request throttling
-- Observability using Prometheus
-- Containerized backend services
+- time-window request throttling
+- observability using Prometheus
+- containerized backend services
 - scalable backend architecture
+- monitoring with Grafana dashboards
 
 ---
 
 # Future Improvements
 
-Possible enhancements
+Possible enhancements:
 
-- Grafana dashboards
-- token bucket algorithm
-- sliding window log limiter
+- Token Bucket rate limiting
+- Sliding Window rate limiter
 - Kubernetes deployment
-- API gateway integration
+- API Gateway integration
+- multi-instance distributed testing
 
 ---
 
@@ -365,5 +472,3 @@ GitHub
 ```
 https://github.com/rahulreddyin
 ```
-
----

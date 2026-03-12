@@ -1,6 +1,8 @@
 package com.rahul.ratelimiter.service;
 
 import com.rahul.ratelimiter.model.RateLimitProperties;
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
@@ -12,10 +14,18 @@ public class RateLimiterService {
 
     private final StringRedisTemplate redisTemplate;
     private final RateLimitProperties rateLimitProperties;
+    private final Counter blockedRequestsCounter;
+    private final Counter allowedRequestsCounter;
 
-    public RateLimiterService(StringRedisTemplate redisTemplate, RateLimitProperties rateLimitProperties) {
+    public RateLimiterService(
+            StringRedisTemplate redisTemplate,
+            RateLimitProperties rateLimitProperties,
+            MeterRegistry meterRegistry
+    ) {
         this.redisTemplate = redisTemplate;
         this.rateLimitProperties = rateLimitProperties;
+        this.blockedRequestsCounter = meterRegistry.counter("ratelimiter.requests.blocked");
+        this.allowedRequestsCounter = meterRegistry.counter("ratelimiter.requests.allowed");
     }
 
     public boolean isAllowed(String userId, String endpoint) {
@@ -30,7 +40,15 @@ public class RateLimiterService {
             redisTemplate.expire(redisKey, Duration.ofSeconds(windowSeconds));
         }
 
-        return currentCount != null && currentCount <= maxRequests;
+        boolean allowed = currentCount != null && currentCount <= maxRequests;
+
+        if (allowed) {
+            allowedRequestsCounter.increment();
+        } else {
+            blockedRequestsCounter.increment();
+        }
+
+        return allowed;
     }
 
     public long getCurrentRequests(String userId, String endpoint) {

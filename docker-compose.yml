@@ -33,3 +33,18 @@ services:
       - "3000:3000"
     depends_on:
       - prometheus
+  ratelimiter-app:
+    build: .
+    container_name: ratelimiter-app
+    ports:
+      - "8080:8080"
+    depends_on:
+      - redis
+    environment:
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: 6379
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/actuator/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5

@@ -269,6 +269,26 @@ Prometheus collects metrics including:
 
 ---
 
+## Configuration
+
+The service supports environment-based configuration for local, Docker, and cloud deployments.
+
+Example environment variables:
+
+```env
+SPRING_DATA_REDIS_HOST=redis
+SPRING_DATA_REDIS_PORT=6379
+SERVER_PORT=8080
+```
+
+## Health Check
+
+The application exposes a health endpoint for service monitoring:
+
+```text
+http://localhost:8080/actuator/health
+```
+
 # Monitoring Dashboard (Grafana)
 
 The system includes a complete **observability stack using Prometheus and Grafana** to monitor application performance and rate limiting behavior.

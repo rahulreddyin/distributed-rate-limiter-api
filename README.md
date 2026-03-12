@@ -3,123 +3,261 @@
 A scalable **distributed rate limiting service** built using **Spring Boot, Redis, and Docker**.
 This system prevents API abuse by controlling how many requests a user or client can make within a defined time window.
 
-Designed for **microservices architectures and high-traffic APIs**.
+It is designed for **microservices architectures and high-traffic APIs**, where multiple service instances must enforce the same rate-limiting rules consistently.
 
 ---
 
-## System Architecture
+# System Architecture
 
-Client → API Gateway → Rate Limiter Service → Redis
 ![Architecture](docs/architecture.png)
 
-Redis acts as the **central distributed store** to track request counts across multiple application instances.
+### Request Flow
+
+Client → Spring Boot API → Redis → Response
+
+Redis acts as a **central distributed store** that tracks request counts across all instances of the application.
 
 ---
 
-## Features
+# Features
 
 • Distributed rate limiting using Redis
-• Token bucket / fixed window rate limiting strategy
-• REST API for request validation
-• Dockerized deployment
-• Configurable request limits
-• Scalable across multiple service instances
+• Fixed window request throttling
+• Per-user rate limiting via request headers
+• REST APIs for request validation
+• Dockerized Redis setup
+• Integration tests for validating rate limit behavior
+• Scalable backend design suitable for microservices environments
 
 ---
 
-## Tech Stack
+# Tech Stack
 
-Backend
-• Java
-• Spring Boot
+### Backend
 
-Infrastructure
-• Redis
-• Docker
-• Docker Compose
+* Java
+* Spring Boot
+* REST APIs
 
-Tools
-• Maven
-• Git
+### Data Store
 
----
+* Redis
 
-## How Rate Limiting Works
+### Infrastructure
 
-1. Client sends request to API
-2. Service checks Redis for request count
-3. If request limit exceeded → return HTTP 429
-4. If within limit → allow request
+* Docker
+* Docker Compose
 
-This ensures fair usage and protects backend services from overload.
+### Build Tools
+
+* Maven
+* Git
 
 ---
 
-## API Endpoints
+# How Rate Limiting Works
 
-### Check Rate Limit
+1. A client sends a request to the API.
+2. The service checks Redis for the number of requests made by that user.
+3. If the request count exceeds the configured limit → return **HTTP 429 (Too Many Requests)**.
+4. If the request is within the limit → allow the request and increment the counter.
 
-POST /api/rate-limit/check
+Redis ensures **consistent request counting across distributed instances**.
 
-Request Example
+---
 
-{
-"clientId": "user123"
-}
+# API Endpoints
+
+## Access Data Endpoint
+
+Request
+
+```http
+GET /api/data
+X-User-Id: user123
+```
 
 Response
 
+```json
 {
-"allowed": true,
-"remainingRequests": 4
+  "endpoint": "/api/data",
+  "message": "Data endpoint accessed successfully",
+  "userId": "user123"
 }
+```
 
 ---
 
-## Running Locally
+## Login Endpoint
 
-### Start Redis
+Request
 
-docker-compose up -d
+```http
+GET /api/login
+X-User-Id: user123
+```
 
-### Build application
+Response
 
-./mvnw clean package
+```json
+{
+  "endpoint": "/api/login",
+  "message": "Login endpoint accessed successfully",
+  "userId": "user123"
+}
+```
 
-### Run application
+---
 
-java -jar target/ratelimiter-0.0.1-SNAPSHOT.jar
+## Admin Endpoint
 
-Server runs on
+Request
 
+```http
+GET /api/admin
+X-User-Id: user123
+```
+
+Response
+
+```json
+{
+  "endpoint": "/api/admin",
+  "message": "Admin endpoint accessed successfully",
+  "userId": "user123"
+}
+```
+
+---
+
+## Rate Limit Exceeded
+
+Response
+
+```json
+{
+  "timestamp": "2026-03-11T20:30:00",
+  "status": 429,
+  "error": "Too Many Requests",
+  "message": "Rate limit exceeded. Try again later.",
+  "path": "/api/admin"
+}
+```
+
+---
+
+# Check Rate Limit Status
+
+Request
+
+```http
+GET /admin/ratelimit/status?userId=user123&endpoint=/api/data
+```
+
+Response
+
+```json
+{
+  "userId": "user123",
+  "endpoint": "/api/data",
+  "currentRequests": 3,
+  "maxRequests": 5,
+  "remainingRequests": 2,
+  "windowSeconds": 60
+}
+```
+
+---
+
+# Run Locally
+
+## Clone Repository
+
+```bash
+git clone https://github.com/rahulreddyin/distributed-rate-limiter-api.git
+cd distributed-rate-limiter-api
+```
+
+---
+
+## Start Redis
+
+```bash
+docker compose up -d redis
+```
+
+---
+
+## Run Spring Boot Application
+
+### Windows
+
+```powershell
+.\mvnw.cmd spring-boot:run
+```
+
+### macOS / Linux
+
+```bash
+./mvnw spring-boot:run
+```
+
+---
+
+## Application URL
+
+```
 http://localhost:8080
+```
+
+Example request:
+
+```bash
+curl -H "X-User-Id: user123" http://localhost:8080/api/data
+```
 
 ---
 
-## Docker Deployment
+# Testing
 
-Build image
+Integration tests verify:
 
-docker build -t rate-limiter .
+• endpoint-specific rate limiting
+• Redis request tracking
+• HTTP 429 responses when limits are exceeded
 
-Run container
+Run tests:
 
-docker run -p 8080:8080 rate-limiter
+### Windows
+
+```powershell
+.\mvnw.cmd test
+```
+
+### macOS / Linux
+
+```bash
+./mvnw test
+```
 
 ---
 
-## Future Improvements
+# Future Improvements
 
-• Sliding window rate limiting
-• Prometheus metrics integration
-• Grafana monitoring dashboards
-• Kubernetes deployment
-• API Gateway integration
+• Implement **Token Bucket algorithm**
+• Add **Sliding Window rate limiting strategy**
+• Use **Redis Lua scripts for atomic operations**
+• Add **Prometheus metrics monitoring**
+• Integrate **Grafana dashboards for traffic visualization**
+• Stream rate-limit events using **Kafka**
+• Deploy service to **AWS / Kubernetes**
+• Add authentication and API keys
 
 ---
 
-## Author
+# Author
 
 Rahul Reddy Puli
 
-Full Stack Software Engineer focused on scalable backend systems, distributed architectures, and cloud applications.
+Full Stack Software Engineer focused on **distributed systems, scalable backend architectures, and cloud-native applications**.

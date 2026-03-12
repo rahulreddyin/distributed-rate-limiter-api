@@ -10,6 +10,7 @@ Designed for **microservices architectures and high-traffic APIs**.
 ## System Architecture
 
 Client → API Gateway → Rate Limiter Service → Redis
+![Architecture](docs/architecture.png)
 
 Redis acts as the **central distributed store** to track request counts across multiple application instances.
 
